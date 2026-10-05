@@ -1,3 +1,3 @@
-#E155 Lab 4
+#E155 Lab 5
  
- This repository includes code that enables an MCU to play music by using timers to generate square waves by toggling a GPIO pin at a specific frequency for specified durations.
+ This repository includes code that enables an MCU to determine the speed of a motor by reading from a quadrature encoder using interrupts.
