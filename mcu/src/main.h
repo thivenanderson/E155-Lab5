@@ -11,8 +11,8 @@
 // Custom defines
 ///////////////////////////////////////////////////////////////////////////////
 
-#define 
-#define 
-#define
+#define ENCODERA_PIN PA8
+#define ENCODERB_PIN PB5
+
 
 #endif // MAIN_H
