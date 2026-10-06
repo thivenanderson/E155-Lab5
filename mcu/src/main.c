@@ -15,5 +15,46 @@ int main(void) {
     //Enable SYSCFG clock domain in RCC
     RCC->APB2ENR |= (1 << 0); // SYSCFGEN
     
+    //Congigure EXITCR for encoder pins
+    //PA8
+    SYSCFG->EXTICR[2] &= ~(0b111 << 0); 
+    //PB5
+    SYSCFG->EXTICR[1] &= ~(0b11 << 5);
+    SYSCFG->EXTICR[1] |= (1 << 4);
 
+    //enable interrups
+    __enable_irq();
+
+    //Configure encoder interrupts for rising and falling edge
+    EXTI->IMR1 |= (1 << gpioPinOffset(ENCODERA_PIN)); 
+    EXTI->IMR1 |= (1 << gpioPinOffset(ENCODERB_PIN));   
+    EXTI->RTSR1 |= (1 << gpioPinOffset(ENCODERA_PIN)); 
+    EXTI->FTSR1 |= (1 << gpioPinOffset(ENCODERA_PIN));  
+    EXTI->RTSR1 |= (1 << gpioPinOffset(ENCODERB_PIN)); 
+    EXTI->FTSR1 |= (1 << gpioPinOffset(ENCODERB_PIN));
+    NVIC->ISER[0] |= (1 << 23);                       // Turn on EXTI interrupt in NVIC_ISER (EXTI9_5 is IRQ 23)
+  
 }
+
+// EXTI lines 5-9 share this handler
+void EXTI9_5_IRQHandler(void){
+    volatile int encoderA_count = 0;
+    volatile int encoderB_count = 0;
+    // Check that the encoder was what triggered our interrupt
+    if (EXTI->PR1 & (1 << gpioPinOffset(ENCODERA_PIN))){
+        // If so, clear the interrupt (NB: Write 1 to reset.)
+        EXTI->PR1 = (1 << gpioPinOffset(ENCODERA_PIN));
+
+        // Then increase count
+        encoderA_count++;
+
+    }
+    if (EXTI->PR1 & (1 << gpioPinOffset(ENCODERB_PIN))){
+        // If so, clear the interrupt (NB: Write 1 to reset.)
+        EXTI->PR1 = (1 << gpioPinOffset(ENCODERB_PIN));
+
+        // Then toggle the LED
+        encoderB_count++;
+
+    }
+  }
