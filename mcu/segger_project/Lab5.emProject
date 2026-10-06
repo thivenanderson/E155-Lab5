@@ -63,6 +63,8 @@
         Name="Common"
         c_user_include_directories="$(ProjectDir)/../lib;$(ProjectDir)/../src"
         filter="c;cpp;cxx;cc;h;s;asm;inc" />
+      <file file_name="../src/encoder.c" />
+      <file file_name="../src/encoder.h" />
       <file file_name="../src/main.c" />
       <file file_name="../src/main.h" />
       <file file_name="../lib/STM32L432KC.h" />
