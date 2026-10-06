@@ -7,8 +7,7 @@
 
 
 
-#define ENCODERA_PIN PA8
-#define ENCODERB_PIN PB5
+
 
 static volatile int encoderA_count = 0;
 static volatile int encoderB_count = 0;

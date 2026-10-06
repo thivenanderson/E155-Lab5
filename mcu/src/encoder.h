@@ -9,6 +9,9 @@
 #include "STM32L432KC.h"
 #include <stm32l432xx.h>
 
+#define ENCODERA_PIN PA8
+#define ENCODERB_PIN PB5
+
 void encoderInit(void);
 int encoderGetACount(void);
 int encoderGetBCount(void);
