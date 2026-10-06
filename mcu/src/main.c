@@ -4,6 +4,7 @@
 //Description: Main program for lab 5 of E155 that enables the MCU to
 // to determine the speed of a motor by reading from a quadrature encoder using interrupts.
 
+#include "main.h"
 int main(void) {
     //Enable encoders pins as inputs
     gpioEnable(GPIO_PORT_A);
