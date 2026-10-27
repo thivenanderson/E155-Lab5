@@ -127,6 +127,7 @@ int32_t encoderGetCount(void) {
     return encoder_count;
 }
 
+// Calculate and return signed motor velocity in rev/s
 float encoderGetVelocity(void) {
     static int32_t previous_count = 0;
     static uint16_t previous_time = 0;
