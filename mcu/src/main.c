@@ -31,7 +31,7 @@ int main(void) {
     while (1) {
         int32_t encoder_count = encoderGetCount();
         float motor_velocity = encoderGetVelocity();
-
+  
         if (motor_velocity > 0.0f) {
             printf("Direction: Clockwise, Velocity: %.3f rev/s\n",
                     motor_velocity);
@@ -43,7 +43,7 @@ int main(void) {
         else {
             printf(" Direction: Stopped, Velocity: 0.000 rev/s\n");
         }
-
+        printf("count=%ld  vel=%.3f\n", (long)encoder_count, motor_velocity);
         delay_millis(TIM7, 250);
     }
 }

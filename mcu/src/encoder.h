@@ -1,27 +1,24 @@
-//Name: Thiven Anderson
-//Email: thanderson@g.hmc.edu
-//Date: 10/05/2026
-//Description: Interface for quadrature encoder interrupts.
-
 #ifndef ENCODER_H
 #define ENCODER_H
 
-#include "STM32L432KC.h"
-#include <stm32l432xx.h>
 #include <stdint.h>
 
-#define ENCODERA_PIN PA8
-#define ENCODERB_PIN PB5
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-// Motor encoder PPR from lab specs.
-// Change to 120 for a -10 motor.
-#define ENCODER_PPR 408.0f
+/* Configure PB5 (A) / PA8 (B), EXTI5/EXTI8, and TIM2 as the timestamp timer. */
+void    encoderInit(void);
 
-// Using both edges of both channels gives 4 counts per encoder pulse.
-#define ENCODER_COUNTS_PER_REV (4.0f * ENCODER_PPR)
-
-void encoderInit(void);
+/* Signed position in quadrature counts (ENCODER_PPR x 4 per output-shaft revolution). */
 int32_t encoderGetCount(void);
-float encoderGetVelocity(void);
 
-#endif // ENCODER_H
+/* Signed velocity in output-shaft revolutions per second.
+ * Returns 0.0f if the shaft has been stationary longer than the timeout. */
+float   encoderGetVelocity(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* ENCODER_H */
