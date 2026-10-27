@@ -8,8 +8,6 @@
 #include "encoder.h"
 #include <stdio.h>
 
-volatile int32_t encoder_count = 0;
-volatile float motor_velocity = 0.0f;
 
 // Function used by printf to send characters to SEGGER
 int _write(int file, char *ptr, int len) {
@@ -35,16 +33,15 @@ int main(void) {
         float motor_velocity = encoderGetVelocity();
 
         if (motor_velocity > 0.0f) {
-            printf("Count: %ld, Direction: Clockwise, Velocity: %.3f rev/s\n",
-                   encoder_count, motor_velocity);
+            printf("Direction: Clockwise, Velocity: %.3f rev/s\n",
+                    motor_velocity);
         }
         else if (motor_velocity < 0.0f) {
-            printf("Count: %ld, Direction: Counterclockwise, Velocity: %.3f rev/s\n",
-                   encoder_count, -motor_velocity);
+            printf("Direction: Counterclockwise, Velocity: %.3f rev/s\n",
+                    -motor_velocity);
         }
         else {
-            printf("Count: %ld, Direction: Stopped, Velocity: 0.000 rev/s\n",
-                   encoder_count);
+            printf(" Direction: Stopped, Velocity: 0.000 rev/s\n");
         }
 
         delay_millis(TIM7, 250);
