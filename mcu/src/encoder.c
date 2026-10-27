@@ -5,73 +5,121 @@
 
 #include "encoder.h"
 
+static volatile int32_t encoder_count = 0;
+static volatile uint8_t previous_state = 0;
 
 
-
-
-static volatile int encoderA_count = 0;
-static volatile int encoderB_count = 0;
-
-void encoderInit(void) {
-    // Enable encoder pins as inputs
+// Initialize encoder GPIO pins
+static void encoderGPIOInit(void) {
     gpioEnable(GPIO_PORT_A);
     pinMode(ENCODERA_PIN, GPIO_INPUT);
+
     gpioEnable(GPIO_PORT_B);
     pinMode(ENCODERB_PIN, GPIO_INPUT);
+}
 
-    // Enable SYSCFG clock domain in RCC
-    RCC->APB2ENR |= (1 << 0); // SYSCFGEN
 
-    // Configure EXTICR for encoder pins
+// Read encoder A and B as a 2-bit state
+static uint8_t encoderReadState(void) {
+    uint8_t encoderA = digitalRead(ENCODERA_PIN);
+    uint8_t encoderB = digitalRead(ENCODERB_PIN);
+
+    return (encoderA << 1) | encoderB;
+}
+
+
+// Initialize encoder interrupts
+static void encoderInterruptInit(void) {
+    RCC->APB2ENR |= (1 << 0);
 
     // PA8 -> EXTI8
     SYSCFG->EXTICR[2] &= ~(0b111 << 0);
 
     // PB5 -> EXTI5
     SYSCFG->EXTICR[1] &= ~(0b111 << 4);
-    SYSCFG->EXTICR[1] |=  (1 << 4);
+    SYSCFG->EXTICR[1] |= (1 << 4);
 
-    // Configure encoder interrupts for rising and falling edges
+    // Enable EXTI8 and EXTI5
     EXTI->IMR1 |= (1 << gpioPinOffset(ENCODERA_PIN));
     EXTI->IMR1 |= (1 << gpioPinOffset(ENCODERB_PIN));
 
+    // Setup to trigger on rising and falling edges
     EXTI->RTSR1 |= (1 << gpioPinOffset(ENCODERA_PIN));
     EXTI->FTSR1 |= (1 << gpioPinOffset(ENCODERA_PIN));
 
     EXTI->RTSR1 |= (1 << gpioPinOffset(ENCODERB_PIN));
     EXTI->FTSR1 |= (1 << gpioPinOffset(ENCODERB_PIN));
 
-    // Enable EXTI5-9 interrupt in NVIC
+    // EXTI5-9 uses IRQ 23
     NVIC->ISER[0] |= (1 << 23);
+}
+
+
+// Initialize encoder
+void encoderInit(void) {
+    encoderGPIOInit();
+
+    // Save initial encoder state
+    previous_state = encoderReadState();
+
+    encoderInterruptInit();
 
     // Enable interrupts globally
     __enable_irq();
 }
 
-int encoderGetACount(void) {
-    return encoderA_count;
+
+// Return signed encoder count
+int32_t encoderGetCount(void) {
+    return encoder_count;
 }
 
-int encoderGetBCount(void) {
-    return encoderB_count;
+
+// Update count based on previous and current quadrature states
+static void encoderUpdateCount(uint8_t current_state) {
+
+    // One direction
+    if ((previous_state == 0b00 && current_state == 0b10) ||
+        (previous_state == 0b10 && current_state == 0b11) ||
+        (previous_state == 0b11 && current_state == 0b01) ||
+        (previous_state == 0b01 && current_state == 0b00)) {
+
+        encoder_count++;
+    }
+
+    // Opposite direction
+    else if ((previous_state == 0b00 && current_state == 0b01) ||
+             (previous_state == 0b01 && current_state == 0b11) ||
+             (previous_state == 0b11 && current_state == 0b10) ||
+             (previous_state == 0b10 && current_state == 0b00)) {
+
+        encoder_count--;
+    }
+
+    // Save state for next encoder edge
+    previous_state = current_state;
 }
+
 
 // EXTI lines 5-9 share this handler
 void EXTI9_5_IRQHandler(void) {
 
-    // Check encoder A interrupt
-    if (EXTI->PR1 & (1 << gpioPinOffset(ENCODERA_PIN))) {
-        // Clear interrupt pending bit
-        EXTI->PR1 = (1 << gpioPinOffset(ENCODERA_PIN));
+    // Check if either encoder channel triggered an interrupt
+    if ((EXTI->PR1 & (1 << gpioPinOffset(ENCODERA_PIN))) ||
+        (EXTI->PR1 & (1 << gpioPinOffset(ENCODERB_PIN)))) {
 
-        encoderA_count++;
-    }
+        // Clear encoder A pending interrupt if set
+        if (EXTI->PR1 & (1 << gpioPinOffset(ENCODERA_PIN))) {
+            EXTI->PR1 = (1 << gpioPinOffset(ENCODERA_PIN));
+        }
 
-    // Check encoder B interrupt
-    if (EXTI->PR1 & (1 << gpioPinOffset(ENCODERB_PIN))) {
-        // Clear interrupt pending bit
-        EXTI->PR1 = (1 << gpioPinOffset(ENCODERB_PIN));
+        // Clear encoder B pending interrupt if set
+        if (EXTI->PR1 & (1 << gpioPinOffset(ENCODERB_PIN))) {
+            EXTI->PR1 = (1 << gpioPinOffset(ENCODERB_PIN));
+        }
 
-        encoderB_count++;
+        uint8_t current_state = encoderReadState();
+
+        encoderUpdateCount(current_state);
     }
 }
