@@ -5,9 +5,18 @@
 
 #include "encoder.h"
 
+#define VELOCITY_SAMPLE_MS 100
+
 static volatile int32_t encoder_count = 0;
 static volatile uint8_t previous_state = 0;
 
+// Convert encoder counts over a time interval to rev/s
+static float encoderCalculateVelocity(int32_t delta_count, uint16_t elapsed_ms) {
+    float revolutions = (float) delta_count / ENCODER_COUNTS_PER_REV;
+    float elapsed_seconds = (float) elapsed_ms / 1000.0f;
+
+    return revolutions / elapsed_seconds;
+}
 
 // Initialize encoder GPIO pins
 static void encoderGPIOInit(void) {
@@ -132,4 +141,25 @@ void EXTI9_5_IRQHandler(void) {
 
         encoderUpdateCount(current_state);
     }
+}
+
+float encoderGetVelocity(void) {
+    static int32_t previous_count = 0;
+    static uint16_t previous_time = 0;
+    static float velocity = 0.0f;
+
+    uint16_t current_time = TIM6->CNT;
+    uint16_t elapsed_time = current_time - previous_time;
+
+    if (elapsed_time >= VELOCITY_SAMPLE_MS) {
+        int32_t current_count = encoder_count;
+        int32_t delta_count = current_count - previous_count;
+
+        velocity = encoderCalculateVelocity(delta_count, elapsed_time);
+
+        previous_count = current_count;
+        previous_time = current_time;
+    }
+
+    return velocity;
 }
