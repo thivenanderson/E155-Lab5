@@ -5,18 +5,15 @@
 
 #include "encoder.h"
 
+//CONSTANTS
 #define VELOCITY_SAMPLE_MS 100
 
+//GLOBAL VARIABLES
 static volatile int32_t encoder_count = 0;
 static volatile uint8_t previous_state = 0;
 
-// Convert encoder counts over a time interval to rev/s
-static float encoderCalculateVelocity(int32_t delta_count, uint16_t elapsed_ms) {
-    float revolutions = (float) delta_count / ENCODER_COUNTS_PER_REV;
-    float elapsed_seconds = (float) elapsed_ms / 1000.0f;
 
-    return revolutions / elapsed_seconds;
-}
+//HELPER FUNCTIONS
 
 // Initialize encoder GPIO pins
 static void encoderGPIOInit(void) {
@@ -28,6 +25,7 @@ static void encoderGPIOInit(void) {
 }
 
 
+
 // Read encoder A and B as a 2-bit state
 static uint8_t encoderReadState(void) {
     uint8_t encoderA = digitalRead(ENCODERA_PIN);
@@ -35,7 +33,6 @@ static uint8_t encoderReadState(void) {
 
     return (encoderA << 1) | encoderB;
 }
-
 
 // Initialize encoder interrupts
 static void encoderInterruptInit(void) {
@@ -75,23 +72,6 @@ static void encoderTimerInit(void) {
     initTIM(TIM6);
 }
 
-// Initialize encoder
-void encoderInit(void) {
-    encoderGPIOInit();
-
-    previous_state = encoderReadState();
-
-    encoderInterruptInit();
-
-    encoderTimerInit();
-
-    __enable_irq();
-}
-
-// Return signed encoder count
-int32_t encoderGetCount(void) {
-    return encoder_count;
-}
 
 
 // Update count based on previous and current quadrature states
@@ -119,7 +99,56 @@ static void encoderUpdateCount(uint8_t current_state) {
     previous_state = current_state;
 }
 
+// Convert encoder counts over a time interval to rev/s
+static float encoderCalculateVelocity(int32_t delta_count, uint16_t elapsed_ms) {
+    float revolutions = (float) delta_count / ENCODER_COUNTS_PER_REV;
+    float elapsed_seconds = (float) elapsed_ms / 1000.0f;
 
+    return revolutions / elapsed_seconds;
+}
+
+//PUBLIC FUNCTIONS
+
+// Initialize encoder
+void encoderInit(void) {
+    encoderGPIOInit();
+
+    previous_state = encoderReadState();
+
+    encoderInterruptInit();
+
+    encoderTimerInit();
+
+    __enable_irq();
+}
+
+// Return signed encoder count
+int32_t encoderGetCount(void) {
+    return encoder_count;
+}
+
+float encoderGetVelocity(void) {
+    static int32_t previous_count = 0;
+    static uint16_t previous_time = 0;
+    static float velocity = 0.0f;
+
+    uint16_t current_time = TIM6->CNT;
+    uint16_t elapsed_time = current_time - previous_time;
+
+    if (elapsed_time >= VELOCITY_SAMPLE_MS) {
+        int32_t current_count = encoder_count;
+        int32_t delta_count = current_count - previous_count;
+
+        velocity = encoderCalculateVelocity(delta_count, elapsed_time);
+
+        previous_count = current_count;
+        previous_time = current_time;
+    }
+
+    return velocity;
+}
+
+//INTERUPT HANDLER
 // EXTI lines 5-9 share this handler
 void EXTI9_5_IRQHandler(void) {
 
@@ -143,23 +172,3 @@ void EXTI9_5_IRQHandler(void) {
     }
 }
 
-float encoderGetVelocity(void) {
-    static int32_t previous_count = 0;
-    static uint16_t previous_time = 0;
-    static float velocity = 0.0f;
-
-    uint16_t current_time = TIM6->CNT;
-    uint16_t elapsed_time = current_time - previous_time;
-
-    if (elapsed_time >= VELOCITY_SAMPLE_MS) {
-        int32_t current_count = encoder_count;
-        int32_t delta_count = current_count - previous_count;
-
-        velocity = encoderCalculateVelocity(delta_count, elapsed_time);
-
-        previous_count = current_count;
-        previous_time = current_time;
-    }
-
-    return velocity;
-}
