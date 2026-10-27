@@ -149,14 +149,21 @@ float encoderGetVelocity(void) {
     return velocity;
 }
 
+
+static volatile uint32_t interrupt_count = 0;
+
+uint32_t encoderGetInterruptCount(void) {
+    return interrupt_count;
+}
+
 //INTERUPT HANDLER
 // EXTI lines 5-9 share this handler
 void EXTI9_5_IRQHandler(void) {
-
+    
     // Check if either encoder channel triggered an interrupt
     if ((EXTI->PR1 & (1 << gpioPinOffset(ENCODERA_PIN))) ||
         (EXTI->PR1 & (1 << gpioPinOffset(ENCODERB_PIN)))) {
-
+        interrupt_count++;
         // Clear encoder A pending interrupt if set
         if (EXTI->PR1 & (1 << gpioPinOffset(ENCODERA_PIN))) {
             EXTI->PR1 = (1 << gpioPinOffset(ENCODERA_PIN));

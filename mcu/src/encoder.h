@@ -23,5 +23,6 @@
 void encoderInit(void);
 int32_t encoderGetCount(void);
 float encoderGetVelocity(void);
+uint32_t encoderGetInterruptCount(void);
 
 #endif // ENCODER_H
