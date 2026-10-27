@@ -54,20 +54,30 @@ static void encoderInterruptInit(void) {
     NVIC->ISER[0] |= (1 << 23);
 }
 
+// Initialize TIM6 as free-running timer for velocity calculation
+static void encoderTimerInit(void) {
+    // Enable TIM6 clock
+    RCC->APB1ENR1 |= (1 << 4);
+
+    // Set maximum count before rollover
+    TIM6->ARR = 0xFFFF;
+
+    // Configure timer for 1 ms per count
+    initTIM(TIM6);
+}
 
 // Initialize encoder
 void encoderInit(void) {
     encoderGPIOInit();
 
-    // Save initial encoder state
     previous_state = encoderReadState();
 
     encoderInterruptInit();
 
-    // Enable interrupts globally
+    encoderTimerInit();
+
     __enable_irq();
 }
-
 
 // Return signed encoder count
 int32_t encoderGetCount(void) {
